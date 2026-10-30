@@ -25,4 +25,4 @@ HTML, CSS and JavaScript. A Java console version of the calculator is also
 included in this project.
 
 ## Author
-Your name
+Atharva B
