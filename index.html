@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Project Newton: projectile motion</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Figtree:wght@400;600&display=swap">
+<style>
+:root{--paper:#EDF2F6;--panel:#FFFFFF;--ink:#14233B;--muted:#5B6B80;--grid:#D3DEE8;--line:#C3D1DE;--accent:#0B7A75;--ball:#E8A100;--bad:#B3261E;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--paper:#0F1722;--panel:#16212F;--ink:#E6EDF5;--muted:#93A4B8;--grid:#25354A;--line:#2A3B52;--accent:#37C2B8;--ball:#FFC233;--bad:#FF8A80;color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#0F1722;--panel:#16212F;--ink:#E6EDF5;--muted:#93A4B8;--grid:#25354A;--line:#2A3B52;--accent:#37C2B8;--ball:#FFC233;--bad:#FF8A80;color-scheme:dark}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 Figtree,system-ui,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:28px 20px 48px}
+h1{font:700 clamp(2rem,5vw,3.2rem)/1.05 "Bricolage Grotesque",Figtree,sans-serif;margin:0 0 6px;letter-spacing:-.02em}
+.sub{margin:0 0 28px;color:var(--muted);max-width:52ch}
+.app{display:grid;grid-template-columns:300px minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:820px){.app{grid-template-columns:1fr}}
+.controls{display:flex;flex-direction:column;gap:18px}
+.f label{display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px}
+.f label span{color:var(--muted);font-weight:400}
+.row{display:grid;grid-template-columns:1fr 88px;gap:12px;align-items:center}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input[type=number],select{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+.presets{display:flex;flex-wrap:wrap;gap:8px}
+button{font:600 .95rem Figtree,sans-serif;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 14px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+button.main{background:var(--ink);color:var(--paper);border-color:var(--ink);padding:10px 22px}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.msg{min-height:1.4em;margin:0;color:var(--bad);font-size:.92rem}
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 12px 16px}
+canvas{display:block;width:100%;aspect-ratio:16/10;min-height:260px}
+.scrub{display:flex;align-items:center;gap:12px;padding:6px 8px 0}
+.scrub label{color:var(--muted);font-size:.9rem;white-space:nowrap}
+.live{display:flex;flex-wrap:wrap;gap:6px 24px;padding:10px 8px 0;margin:0;color:var(--muted);font-size:.92rem}
+.live div{display:flex;gap:6px}.live dt{margin:0}.live dd{margin:0;color:var(--ink);font-weight:600;min-width:3.6em}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:22px}
+.stats div{padding:0 18px;border-left:1px solid var(--line)}
+.stats div:first-child{padding-left:0;border-left:0}
+.stats b{display:block;font:700 clamp(1.5rem,4vw,2.4rem)/1.1 "Bricolage Grotesque",Figtree,sans-serif}
+.stats b small{font-size:.5em;font-weight:500;color:var(--muted)}
+.stats span{color:var(--muted);font-size:.92rem}
+.math{margin-top:28px;border-top:1px solid var(--line);padding-top:16px}
+.math h2{font:700 1.15rem "Bricolage Grotesque",Figtree,sans-serif;margin:0 0 8px}
+.math p{margin:4px 0;max-width:80ch}
+.math p b{display:inline-block;min-width:2.2em}
+.note{color:var(--muted);font-size:.92rem;margin-top:10px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Project Newton</h1>
+  <p class="sub">Set a launch speed, an angle and gravity. See where the projectile lands and trace its path.</p>
+
+  <div class="app">
+    <section class="controls" aria-label="Launch settings">
+      <div class="f"><label for="u">Launch speed <span>m/s</span></label>
+        <div class="row"><input type="range" id="uR" min="1" max="100" step="0.5" aria-label="Launch speed slider"><input type="number" id="u" step="any"></div></div>
+      <div class="f"><label for="a">Launch angle <span>degrees</span></label>
+        <div class="row"><input type="range" id="aR" min="0" max="90" step="0.5" aria-label="Launch angle slider"><input type="number" id="a" step="any"></div></div>
+      <div class="f"><label for="g">Gravity <span>m/s²</span></label>
+        <div class="row"><input type="range" id="gR" min="0.5" max="30" step="0.01" aria-label="Gravity slider"><input type="number" id="g" step="any"></div></div>
+      <div class="presets" aria-label="Gravity presets">
+        <button data-g="9.81">Earth</button><button data-g="1.62">Moon</button><button data-g="3.71">Mars</button><button data-g="24.79">Jupiter</button>
+      </div>
+      <p class="msg" id="msg" role="alert"></p>
+      <div class="btns">
+        <button class="main" id="go">Launch</button>
+        <button id="pause">Pause</button>
+        <button id="keep">Keep path</button>
+        <button id="clear">Clear paths</button>
+      </div>
+      <div class="f"><label for="spd">Playback speed</label>
+        <select id="spd"><option value="0.5">Half speed</option><option value="1" selected>Normal</option><option value="2">Double speed</option></select></div>
+    </section>
+
+    <section>
+      <div class="stage">
+        <canvas id="cv" role="img" aria-label="Projectile path"></canvas>
+        <div class="scrub"><label for="scrub">Move through time</label><input type="range" id="scrub" min="0" max="1000" value="0" style="flex:1"></div>
+        <dl class="live">
+          <div><dt>Time</dt><dd id="lT">0 s</dd></div>
+          <div><dt>Distance</dt><dd id="lX">0 m</dd></div>
+          <div><dt>Height</dt><dd id="lY">0 m</dd></div>
+          <div><dt>Speed</dt><dd id="lV">0 m/s</dd></div>
+        </dl>
+      </div>
+      <div class="stats">
+        <div><b id="sR"></b><span>Horizontal range</span></div>
+        <div><b id="sH"></b><span>Maximum height</span></div>
+        <div><b id="sT"></b><span>Time of flight</span></div>
+      </div>
+      <div class="math">
+        <h2>The working</h2>
+        <p><b>R</b> = u² sin 2θ ÷ g = <span id="fR"></span></p>
+        <p><b>H</b> = (u sin θ)² ÷ 2g = <span id="fH"></span></p>
+        <p><b>T</b> = 2u sin θ ÷ g = <span id="fT"></span></p>
+        <p class="note">These formulas assume the object lands at the height it was launched from and there is no air resistance. On level ground the range is greatest at 45°.</p>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const S={u:25,a:45,g:9.81},ghosts=[];
+const cv=$('cv'),cx=cv.getContext('2d'),reduce=matchMedia('(prefers-reduced-motion: reduce)');
+let t=0,playing=false,last=0,speed=1,raf=0;
+
+const f=(n,d=2)=>String(+n.toFixed(d));
+function calc(p){const r=p.a*Math.PI/180,vx=p.u*Math.cos(r),vy=p.u*Math.sin(r),T=2*vy/p.g;
+  return{vx,vy,T,H:vy*vy/(2*p.g),R:vx*T}}
+function nice(x){const e=Math.pow(10,Math.floor(Math.log10(x))),m=x/e;return(m<1.5?1:m<3.5?2:m<7.5?5:10)*e}
+
+function draw(){
+  const W=cv.clientWidth,H=cv.clientHeight,d=window.devicePixelRatio||1;
+  if(!W)return;
+  if(cv.width!==Math.round(W*d)||cv.height!==Math.round(H*d)){cv.width=Math.round(W*d);cv.height=Math.round(H*d)}
+  cx.setTransform(d,0,0,d,0,0);cx.clearRect(0,0,W,H);
+  const cs=getComputedStyle(document.documentElement),c=n=>cs.getPropertyValue(n).trim();
+  const m={l:50,r:18,t:22,b:38},pw=W-m.l-m.r,ph=H-m.t-m.b;
+  const C=calc(S),all=[S,...ghosts].map(calc);
+  const wx=Math.max(1,1.1*Math.max(...all.map(o=>o.R))),wy=Math.max(1,1.3*Math.max(...all.map(o=>o.H)));
+  const k=Math.min(pw/wx,ph/wy),X=x=>m.l+x*k,Y=y=>H-m.b-y*k;
+  const vw=pw/k,vh=ph/k,st=nice(vw/8);
+  cx.font='12px Figtree,system-ui,sans-serif';cx.lineWidth=1;
+
+  cx.strokeStyle=c('--grid');cx.fillStyle=c('--muted');
+  cx.textAlign='center';cx.textBaseline='top';
+  for(let i=0;i*st<=vw;i++){const x=X(i*st);cx.beginPath();cx.moveTo(x,Y(0));cx.lineTo(x,m.t);cx.stroke();cx.fillText(f(i*st),x,Y(0)+6)}
+  cx.textAlign='right';cx.textBaseline='middle';
+  for(let i=0;i*st<=vh;i++){const y=Y(i*st);cx.beginPath();cx.moveTo(m.l,y);cx.lineTo(W-m.r,y);cx.stroke();cx.fillText(f(i*st),m.l-8,y)}
+  cx.textAlign='left';cx.textBaseline='top';cx.fillText('height (m)',6,4);
+  cx.textAlign='right';cx.fillText('distance (m)',W-m.r,H-16);
+
+  cx.strokeStyle=c('--ink');cx.lineWidth=2;cx.beginPath();cx.moveTo(m.l,Y(0));cx.lineTo(W-m.r,Y(0));cx.stroke();
+
+  function trace(p,o,upto,col,w,dash,alpha){
+    cx.globalAlpha=alpha;cx.strokeStyle=col;cx.lineWidth=w;cx.setLineDash(dash);cx.beginPath();
+    for(let i=0;i<=90;i++){const tt=upto*i/90,y=Math.max(o.vy*tt-.5*p.g*tt*tt,0);i?cx.lineTo(X(o.vx*tt),Y(y)):cx.moveTo(X(o.vx*tt),Y(y))}
+    cx.stroke();cx.setLineDash([]);cx.globalAlpha=1}
+  ghosts.forEach(p=>{const o=calc(p);trace(p,o,o.T,c('--muted'),1.5,[],.55)});
+  trace(S,C,C.T,c('--muted'),1.5,[5,5],.7);
+  trace(S,C,t,c('--accent'),3.5,[],1);
+
+  const bx=C.vx*t,by=Math.max(C.vy*t-.5*S.g*t*t,0),vyN=C.vy-S.g*t,vN=Math.hypot(C.vx,vyN);
+  if(t>=C.T/2){
+    cx.strokeStyle=c('--muted');cx.setLineDash([2,4]);cx.lineWidth=1;cx.beginPath();cx.moveTo(X(C.R/2),Y(C.H));cx.lineTo(X(C.R/2),Y(0));cx.stroke();cx.setLineDash([]);
+    cx.fillStyle=c('--ink');cx.textAlign='center';cx.textBaseline='bottom';cx.fillText(f(C.H)+' m',X(C.R/2),Y(C.H)-8);
+    cx.beginPath();cx.arc(X(C.R/2),Y(C.H),3.5,0,7);cx.fill()}
+  if(t>=C.T&&C.R>0){
+    const y=Y(0)+24;cx.strokeStyle=c('--ink');cx.lineWidth=1.5;
+    cx.beginPath();cx.moveTo(X(0),y);cx.lineTo(X(C.R),y);cx.moveTo(X(0),y-5);cx.lineTo(X(0),y+5);cx.moveTo(X(C.R),y-5);cx.lineTo(X(C.R),y+5);cx.stroke();
+    cx.fillStyle=c('--ink');cx.font='600 12px Figtree,system-ui,sans-serif';cx.textAlign='center';cx.textBaseline='bottom';
+    cx.fillText('R = '+f(C.R)+' m',X(C.R/2),y-4);cx.font='12px Figtree,system-ui,sans-serif'}
+  if(t<C.T){const q=60/S.u,dx=C.vx*q,dy=-vyN*q;
+    if(Math.hypot(dx,dy)>6){const x0=X(bx),y0=Y(by),a=Math.atan2(dy,dx);
+      cx.strokeStyle=cx.fillStyle=c('--ink');cx.lineWidth=2;cx.beginPath();cx.moveTo(x0,y0);cx.lineTo(x0+dx,y0+dy);cx.stroke();
+      cx.beginPath();cx.moveTo(x0+dx,y0+dy);cx.lineTo(x0+dx-8*Math.cos(a-.4),y0+dy-8*Math.sin(a-.4));cx.lineTo(x0+dx-8*Math.cos(a+.4),y0+dy-8*Math.sin(a+.4));cx.closePath();cx.fill()}}
+  cx.fillStyle=c('--ball');cx.strokeStyle=c('--ink');cx.lineWidth=2;
+  cx.beginPath();cx.arc(X(bx),Y(by),7,0,7);cx.fill();cx.stroke();
+
+  $('lT').textContent=f(t)+' s';$('lX').textContent=f(bx,1)+' m';$('lY').textContent=f(by,1)+' m';$('lV').textContent=f(t>=C.T?S.u:vN,1)+' m/s';
+  if(document.activeElement!==$('scrub'))$('scrub').value=C.T?t/C.T*1000:0;
+}
+
+function results(){
+  const C=calc(S);
+  $('sR').innerHTML=f(C.R)+' <small>m</small>';$('sH').innerHTML=f(C.H)+' <small>m</small>';$('sT').innerHTML=f(C.T)+' <small>s</small>';
+  $('fR').textContent=`${f(S.u)}² × sin(${f(2*S.a)}°) ÷ ${f(S.g)} = ${f(C.R)} m`;
+  $('fH').textContent=`(${f(S.u)} × sin ${f(S.a)}°)² ÷ (2 × ${f(S.g)}) = ${f(C.H)} m`;
+  $('fT').textContent=`2 × ${f(S.u)} × sin ${f(S.a)}° ÷ ${f(S.g)} = ${f(C.T)} s`;
+  cv.setAttribute('aria-label',`Projectile launched at ${f(S.u)} metres per second and ${f(S.a)} degrees lands ${f(C.R)} metres away, reaching ${f(C.H)} metres high in ${f(C.T)} seconds.`);
+}
+function syncBtn(){const T=calc(S).T;$('pause').textContent=playing?'Pause':'Resume';$('pause').disabled=t>=T}
+function frame(ts){
+  if(!playing)return;
+  const C=calc(S),dt=Math.min((ts-last)/1000,.05);last=ts;
+  t=Math.min(C.T,t+dt*speed*C.T/Math.min(7,Math.max(2.5,C.T)));
+  if(t>=C.T)playing=false;
+  draw();syncBtn();
+  if(playing)raf=requestAnimationFrame(frame);
+}
+function launch(){
+  cancelAnimationFrame(raf);const C=calc(S);
+  if(reduce.matches){t=C.T;playing=false;draw()}
+  else{t=0;playing=true;last=performance.now();raf=requestAnimationFrame(frame)}
+  syncBtn();
+}
+
+const F={
+  u:{r:$('uR'),n:$('u'),ok:v=>v>0&&v<=1000,m:'Launch speed must be above 0 and at most 1000 m/s.'},
+  a:{r:$('aR'),n:$('a'),ok:v=>v>=0&&v<=90,m:'Angle must be between 0° and 90°.'},
+  g:{r:$('gR'),n:$('g'),ok:v=>v>0&&v<=1000,m:'Gravity must be above 0 and at most 1000 m/s².'}
+};
+function upd(k,v,syncNum){
+  if(!F[k].ok(v)){$('msg').textContent=F[k].m;return}
+  $('msg').textContent='';S[k]=v;F[k].r.value=v;if(syncNum)F[k].n.value=v;
+  cancelAnimationFrame(raf);playing=false;t=calc(S).T;results();draw();syncBtn();
+}
+for(const k in F){
+  F[k].r.oninput=()=>upd(k,+F[k].r.value,true);
+  F[k].n.oninput=()=>upd(k,parseFloat(F[k].n.value),false);
+  F[k].r.onchange=F[k].n.onchange=()=>{if(F[k].ok(S[k])&&F[k].ok(parseFloat(F[k].n.value)))launch()};
+}
+document.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{upd('g',+b.dataset.g,true);launch()});
+$('go').onclick=launch;
+$('pause').onclick=()=>{
+  if(playing){playing=false}else{playing=true;last=performance.now();raf=requestAnimationFrame(frame)}
+  syncBtn();
+};
+$('keep').onclick=()=>{ghosts.push({...S});if(ghosts.length>4)ghosts.shift();draw()};
+$('clear').onclick=()=>{ghosts.length=0;draw()};
+$('spd').onchange=e=>speed=+e.target.value;
+$('scrub').oninput=e=>{cancelAnimationFrame(raf);playing=false;t=e.target.value/1000*calc(S).T;draw();syncBtn()};
+new ResizeObserver(draw).observe(cv);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',draw);
+
+for(const k in F){F[k].n.value=S[k];F[k].r.value=S[k]}
+results();launch();
+</script>
+</body>
+</html>
